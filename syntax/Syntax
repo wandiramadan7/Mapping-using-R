@@ -1,0 +1,117 @@
+############### Mapping ###############
+
+### Library
+install.packages(c("sp", "maptools", "spdep", "INLA", "RColorBrewer", 
+                   "lattice", "gstat", "raster", "splancs", "ggplot2", 
+                   "dplyr", "tidyr", "brinla", "sarima", "extrafont", 
+                   "ggsn", "devtools", "rgdal"))
+
+library(sp)
+library(maptools)
+library(spdep)
+library(INLA)
+library(RColorBrewer)
+library(lattice)
+library(gstat)
+library(raster)
+require(splancs)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(brinla)
+library(sarima)
+library(extrafont)
+library(ggsn)
+library(devtools)
+library(rgdal)
+
+### Set working directory
+setwd("C:/YourPath")
+
+### Download map
+# Read shapefile for Jawa Tengah at Kabupaten levels
+jateng.map1=readOGR(dsn="C:your path")
+length(jateng.map1)
+jateng.map <- jateng.map1[-c(36,37),]
+length(jateng.map)
+Jateng <- jateng.map
+Jateng1 <- Jateng
+
+plot(jateng.map, main = "PETA PROVINSI JAWA TENGAH", col = "white", axes = TRUE)
+text(Coordinate - 0.001, label = no, cex = 1)
+
+### Plot map
+plot(jateng.map, main = "Peta Provinsi Jawa Tengah", col = brewer.pal(n = 35, name = 'Set3'))
+jateng.map$KABKOT
+text(jateng.map, jateng.map$KABKOT, cex = 0.5)
+no <- c(1:35)
+Coordinate <- coordinates(jateng.map)
+
+### Plot map
+Kabupaten <- Jateng$KABKOT
+COOR <- coordinates(jateng.map)
+
+plot(jateng.map, axes = TRUE, col = "gray90")
+text(COOR[, 1], COOR[, 2], row.names(jateng.map), col = "black", cex = 0.8, pos = 1.5)
+points(COOR[, 1], COOR[, 2], pch = 19, cex = 0.7, col = "blue")
+
+### Read Data
+Unemploy <- read.csv("Data.csv", header = TRUE)
+Unemploy$x <- COOR[, 1]
+Unemploy$y <- COOR[, 2]
+
+### Time series plot
+a <- ggplot(data = Unemploy, aes(x = Tahun, y = TingkatPengangguran)) +
+  geom_line() +
+  facet_wrap(. ~ Wilayah, ncol = 5, scales = "free") 
+a
+
+### Map Jateng
+Label <- c('2018' = "Tahun 2018", '2019' = "Tahun 2019")
+
+Jateng1$ID <- c(1:35)
+Jateng1 <- fortify(Jateng1, region = "ID")
+
+JatengMap <- fortify(Jateng1, regions = "ID")
+JatengMap1 <- merge(JatengMap, Unemploy, by = "id", all.x = TRUE)
+JatengMap1 <- JatengMap1[order(JatengMap1$order), ]
+
+### Tahun 2018 & 2019
+JatengMap1_18 <- JatengMap1[JatengMap1$Tahun == 2018,]
+JatengMap1_19 <- JatengMap1[JatengMap1$Tahun == 2019,]
+
+p18 <- ggplot(JatengMap1_18) +
+  geom_polygon(aes(fill = TingkatPengangguran, x = long, y = lat, group = group), color = "gray80", size = 0.1) +
+  facet_wrap(. ~ Tahun, labeller = as_labeller(Label), ncol = 3) +
+  scale_fill_gradientn(colours = c("green", "yellow", "orange", "red", "red3"), breaks = c(3, 5, 8, 10)) +
+  theme_bw() +
+  ylab("Northing") +
+  xlab("Easting") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme(legend.position = "bottom") +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  geom_text(data = JatengMap1_18, aes(x = x, y = y, label = Wilayah), size = 2.5, color = "black") +
+  labs(fill = "Persentase Pengangguran Tahun 2018") +
+  theme(legend.position = "bottom", text = element_text(size = 25)) +
+  theme(text = element_text(size = 13)) +
+  guides(fill = guide_colorbar(title.position = "left", title.vjust = 1, frame.colour = "black", barwidth = 20, barheight = 1.5))
+p18
+
+q19 <- ggplot(JatengMap1_19) +
+  geom_polygon(aes(fill = TingkatPengangguran, x = long, y = lat, group = group), color = "gray80", size = 0.1) +
+  facet_wrap(. ~ Tahun, labeller = as_labeller(Label), ncol = 2) +
+  scale_fill_gradientn(colours = c("green", "yellow", "orange", "red", "red3"), breaks = c(3, 5, 8, 10)) +
+  theme_bw() +
+  ylab("Northing") +
+  xlab("Easting") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme(legend.position = "bottom") +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  geom_text(data = JatengMap1_19, aes(x = x, y = y, label = Wilayah), size = 2.5, color = "black") +
+  labs(fill = "Tingkat Pengangguran 2019") +
+  theme(legend.position = "bottom", text = element_text(size = 25)) +
+  theme(text = element_text(size = 13)) +
+  guides(fill = guide_colorbar(title.position = "left", title.vjust = 1, frame.colour = "black", barwidth = 20, barheight = 1.5))
+q19
